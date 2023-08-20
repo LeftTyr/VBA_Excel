@@ -1,0 +1,453 @@
+Option Explicit
+
+Private Const CONTEXT_MENU_TAG = "NFS Menu Contextual"
+
+Sub AddContextMenuItems()
+
+  Dim iContextMenu      As CommandBar
+  Dim NewControl        As CommandBarControl
+  Dim NewPopup          As CommandBarPopup
+  
+  Call DeleteContextMenuItems
+  
+  For Each iContextMenu In Application.CommandBars
+  
+    If iContextMenu.Name = "Cell" Then
+    
+      Set NewControl = iContextMenu.Controls.Add(Type:=msoControlButton, before:=1)
+      
+      With NewControl
+        .Caption = "Formatar MB51/MB52/REIM009"
+        .Tag = CONTEXT_MENU_TAG
+        .OnAction = "FormatPlan"
+        .FaceId = 162
+      End With
+        
+      Set NewPopup = iContextMenu.Controls.Add(Type:=msoControlPopup, before:=2)
+      
+      With NewPopup
+        .Caption = "Formatar Corpo"
+        .Tag = CONTEXT_MENU_TAG
+        
+        With .Controls.Add(Type:=msoControlButton)
+          .Caption = "Cinza"
+          .OnAction = "ColorTheme1"
+          .FaceId = 11
+        End With
+        
+        With .Controls.Add(Type:=msoControlButton)
+          .Caption = "Bege"
+          .OnAction = "ColorTheme2"
+          .FaceId = 12
+        End With
+        
+        With .Controls.Add(Type:=msoControlButton)
+          .Caption = "Azul"
+          .OnAction = "ColorTheme3"
+          .FaceId = 13
+        End With
+        
+      End With
+      
+    End If
+    
+  Next iContextMenu
+  
+End Sub
+
+Sub DeleteContextMenuItems()
+
+  Dim iContextMenu      As CommandBar
+  Dim iControl          As Object
+  
+  For Each iContextMenu In Application.CommandBars
+  
+    If iContextMenu.Name = "Cell" Then
+    
+      For Each iControl In iContextMenu.Controls
+      
+        If iControl.Tag = CONTEXT_MENU_TAG Then iControl.Delete
+        
+      Next iControl
+      
+    End If
+    
+  Next iContextMenu
+  
+End Sub
+
+Sub ResetContextMenus()
+
+  Dim iContextMenu      As CommandBar
+  Dim iControl          As Object
+  
+  For Each iContextMenu In Application.CommandBars
+  
+    If iContextMenu.Name = "Cell" Then iContextMenu.Reset
+    
+  Next iContextMenu
+  
+End Sub
+
+Private Sub FormatPlan()
+  
+  On Error GoTo ErrHandler
+  
+  Call TurnOffFunctionality
+  
+  'É MB51?
+  If Trim(UCase(ActiveSheet.Range("R1").Value2)) = "DOC.MATERIAL" Then Call FormataMB51
+  
+  'É MB52?
+  If Trim(UCase(ActiveSheet.Range("B1").Value2)) = "DEPÓSITO" Then Call FormataMB52
+  
+  'É Doc de Inventário?
+  If Trim(UCase(ActiveSheet.Range("B1").Value2)) = "DOCUMENTO INVENTÁRIO" Then Call FormataREIM009
+  
+  Call TurnOnFunctionality
+  
+  MsgBox "Concluída com Sucesso!", vbInformation, "FORMATAÇÃO PLANILHA"
+  
+  Exit Sub
+  
+ErrHandler:
+  MsgBox "Erro não tratado número " & Err.Number & vbNewLine & _
+         "Descrição do erro: " & Err.Description, vbCritical
+  
+  Call TurnOnFunctionality
+  
+  End Sub
+  
+Sub FormataMB51()
+  
+  ActiveSheet.Name = NOMEPLANCONTEXTMENU    'Constante no módulo a_Public
+  
+  Set w = Worksheets(NOMEPLANCONTEXTMENU)
+  
+  'Cria e renomeia nova planilha
+  Worksheets(w.Name).Copy After:=Worksheets(Worksheets.Count)
+  
+  ActiveSheet.Name = "SAP-MB51"
+  
+  Set w = Worksheets(ActiveSheet.Name)
+  
+  w.Activate
+  
+  ActiveWindow.DisplayGridlines = False
+  
+  With w
+    
+    'Formatação Geral
+    With .Cells
+      
+      .ClearFormats
+      .Font.Name = "Consolas"
+      .Font.Size = 10
+      .Font.Italic = True
+      .VerticalAlignment = xlCenter
+      
+    End With
+      
+    'Formata Cabeçalho
+    .Range("A1").Select
+    .Range(Selection, Selection.End(xlToRight)).Select
+    
+    With Selection
+      
+      .WrapText = False
+      .Font.Size = 11
+      .Font.ThemeColor = xlThemeColorDark1
+      .Font.Bold = True
+      .Interior.Color = 6299648    'Azul VW
+      'Bordas
+      .Borders(xlEdgeTop).Weight = xlHairline
+      .Borders(xlEdgeLeft).Weight = xlHairline
+      .Borders(xlEdgeRight).Weight = xlHairline
+      .Borders(xlEdgeBottom).Weight = xlHairline
+      .Borders(xlInsideVertical).Weight = xlHairline
+        
+    End With    'Selection
+    
+    'Primeira letra em Maiúscula
+    For Each iCell In Selection
+      
+      iCell.Value2 = Application.Proper(iCell.Value2)
+      
+    Next iCell
+    
+    .Range("B1").Value2 = "Partnumber"
+    .Range("C1").Value2 = "Usuário"
+    .Range("D1").Value2 = "Documento"
+    .Range("E1").Value2 = "Lançamento"
+    .Range("F1").Value2 = "Entrada"
+    .Range("G1").Value2 = "Hora"
+    .Range("H1").Value2 = "Dep"
+    .Range("I1").Value2 = "Movimento"
+    .Range("K1").Value2 = "Est. Espec"
+    .Range("L1").Value2 = "Texto Documento"
+    .Range("M1").Value2 = "N. Fiscal"
+    .Range("O1").Value2 = "T.M"
+    .Range("P1").Value2 = "Descrição"
+    
+    .Range("D:D,E:E,F:F").NumberFormat = "m/d/yyyy"
+    
+    .Columns("G:G").NumberFormat = "[$-x-systime]h:mm:ss AM/PM"
+    
+    .Columns("J:J").NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    
+    .Columns("Q:Q").Style = "Currency"
+    
+    .Range("A:A,C:I,K:K,M:O,Q:S").HorizontalAlignment = xlCenter
+    
+    .Cells.EntireColumn.AutoFit
+    
+    .Range("A3").Select
+    
+  End With
+    
+  Set w = Nothing
+
+End Sub
+
+Sub FormataMB52()
+
+  ActiveSheet.Name = NOMEPLANCONTEXTMENU    'Constante no módulo a_Public
+  
+  Set w = Worksheets(NOMEPLANCONTEXTMENU)
+  
+  w.Activate
+  
+  ActiveWindow.DisplayGridlines = False
+  
+  If w.AutoFilterMode Then w.AutoFilterMode = False   'Retira filtro caso exista
+  
+  With w
+    
+    'Formatação Geral
+    With .Cells
+      
+      .ClearFormats
+      .Font.Name = "Consolas"
+      .Font.Size = 10
+      .Font.Italic = True
+      .VerticalAlignment = xlCenter
+      
+    End With
+      
+    'Formata Cabeçalho
+    .Range("A1").Select
+    .Range(Selection, Selection.End(xlToRight)).Select
+    
+    With Selection
+      
+      .WrapText = False
+      .Font.Size = 11
+      .Font.ThemeColor = xlThemeColorDark1
+      .Font.Bold = True
+      .Interior.Color = 6299648    'Azul VW
+      
+      'Bordas
+      .Borders(xlEdgeTop).Weight = xlHairline
+      .Borders(xlEdgeLeft).Weight = xlHairline
+      .Borders(xlEdgeRight).Weight = xlHairline
+      .Borders(xlEdgeBottom).Weight = xlHairline
+      .Borders(xlInsideVertical).Weight = xlHairline
+        
+    End With    'Selection
+    
+    'Primeira letra em Maiúscula
+    For Each iCell In Selection
+    
+      iCell.Value2 = Application.Proper(iCell.Value2)
+      
+    Next iCell
+        
+    .Range("A1").Select    'Retira seleção do cabeçalho
+  
+    .Cells.EntireColumn.AutoFit
+  
+  End With
+  
+  'Cria e renomeia nova planilha
+  Worksheets(w.Name).Copy After:=Worksheets(Worksheets.Count)
+  
+  ActiveSheet.Name = "SAP-MB52"
+  
+  Set w = Worksheets(ActiveSheet.Name)
+  
+  With w
+    
+    .Range("B1").Value2 = "Dep"
+    .Range("C1").Value2 = "Partnumber"
+    .Range("D1").Value2 = "Descrição"
+    .Range("E1").Value2 = "Qde Dep"
+    .Range("F1").Value2 = "UM"
+    .Range("G1").Value2 = "Valor Total"
+    .Range("I1").Value2 = "Trânsito"
+    .Range("J1").Value2 = "Valor Trânsito"
+    
+    .Range("A:A,B:B,F:F,H:H").HorizontalAlignment = xlCenter
+    .Range("E:E,I:I").NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    .Range("G:G,J:J").Style = "Currency"
+    
+    .Cells.EntireColumn.AutoFit
+    .Range("A3").Select
+  
+  End With
+  
+  Call TransformaEmTabelaMB52
+      
+  Set w = Nothing
+  
+End Sub
+
+Private Sub TransformaEmTabelaMB52()
+  
+  Set CountRow = w.Cells(w.Rows.Count, 3).End(xlUp)    'Conta Linhas
+   
+  w.ListObjects.Add(xlSrcRange, Range("A1:J" & CountRow.Row), , xlYes).Name = "MB52"
+  
+  w.Cells.EntireColumn.AutoFit
+  
+  w.Range("A1").Select
+  
+End Sub
+
+Sub FormataREIM009()
+  
+  ActiveSheet.Name = NOMEPLANCONTEXTMENU    'Constante no módulo a_Public
+  
+  Set w = Worksheets(NOMEPLANCONTEXTMENU)
+  
+  w.Activate
+  
+  ActiveWindow.DisplayGridlines = False
+  
+  If w.AutoFilterMode Then w.AutoFilterMode = False   'Retira filtro caso exista
+  
+  With w
+    
+    'Formatação Geral
+    With .Cells
+      
+      .ClearFormats
+      .Font.Name = "Consolas"
+      .Font.Size = 10
+      .Font.Italic = True
+      .VerticalAlignment = xlCenter
+      
+    End With
+      
+    'Formata Cabeçalho
+    .Range("A1").Select
+    .Range(Selection, Selection.End(xlToRight)).Select
+    
+    With Selection
+      
+      .WrapText = False
+      .Font.Size = 11
+      .Font.ThemeColor = xlThemeColorDark1
+      .Font.Bold = True
+      .Interior.Color = 6299648    'Azul VW
+      
+      'Bordas
+      .Borders(xlEdgeTop).Weight = xlHairline
+      .Borders(xlEdgeLeft).Weight = xlHairline
+      .Borders(xlEdgeRight).Weight = xlHairline
+      .Borders(xlEdgeBottom).Weight = xlHairline
+      .Borders(xlInsideVertical).Weight = xlHairline
+        
+    End With    'Selection
+    
+    'Primeira letra em Maiúscula
+    For Each iCell In Selection
+    
+      iCell.Value2 = Application.Proper(iCell.Value2)
+      
+    Next iCell
+        
+    .Range("A1").Select    'Retira seleção do cabeçalho
+  
+    .Cells.EntireColumn.AutoFit
+  
+  End With
+  
+  'Cria e renomeia nova planilha
+  Worksheets(w.Name).Copy After:=Worksheets(Worksheets.Count)
+  
+  ActiveSheet.Name = "SAP-REIM009"
+  
+  Set w = Worksheets(ActiveSheet.Name)
+  
+  With w
+    
+    .Range("B1").Value2 = "Doc. Inventário"
+    .Range("D1").Value2 = "SM"
+    .Range("F1").Value2 = "T. Doc. Invent"
+    .Range("G1").Value2 = "St. Doc. Invent"
+    .Range("H1").Value2 = "Modificado"
+    .Range("I1").Value2 = "Analista"
+    .Range("S1").Value2 = "R$ Unit"
+    
+    
+    .Range("A:A,B:B,D:U").HorizontalAlignment = xlCenter
+    .Range("H:H,J:J,Q:Q").NumberFormat = "m/d/yyyy"
+    .Range("K:P").NumberFormat = "_-* #,##0_-;-* #,##0_-;_-* ""-""??_-;_-@_-"
+    .Range("S:U").Style = "Currency"
+    
+    .Cells.EntireColumn.AutoFit
+    .Range("A3").Select
+  
+  End With
+  
+  Call TransformaEmTabelaREIM009
+      
+  Set w = Nothing
+  
+End Sub
+
+Private Sub TransformaEmTabelaREIM009()
+  
+  Set CountRow = w.Cells(w.Rows.Count, 3).End(xlUp)    'Conta Linhas
+   
+  w.ListObjects.Add(xlSrcRange, Range("A1:W" & CountRow.Row), , xlYes).Name = "REIM009"
+  
+  w.Cells.EntireColumn.AutoFit
+  
+  w.Range("A1").Select
+  
+End Sub
+
+
+Private Sub ColorTheme1()
+  
+End Sub
+
+Private Sub ColorTheme2()
+
+End Sub
+
+Private Sub ColorTheme3()
+
+End Sub
+
+Private Sub ColorTheme(pColor1 As Long, pColor2 As Long)
+  
+  Dim iRow As Range
+  
+  For Each iRow In Selection.Rows
+    
+    If iRow.Row Mod 2 = 0 Then
+      
+      iRow.Interior.Color = pColor1
+    
+      Else
+        
+        iRow.Interior.Color = pColor2
+    
+    End If
+  
+  Next iRow
+
+End Sub
+
