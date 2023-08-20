@@ -1,0 +1,208 @@
+Option Explicit
+
+'+----------------------------------+
+'|By:           N. Silva            |
+'|Purpose:                          |
+'| 1 PartNumber sem ponto e espaço  |
+'| 2 PartNumber com ponto e espaço  |
+'+----------------------------------+
+
+Sub FormataPartnumber()
+  
+  Dim frm             As frmFormataPartnumber: Set frm = New frmFormataPartnumber
+  Dim CelulaInicio    As String
+  
+  Set w = ActiveSheet
+      
+  w.Activate
+    
+  'Captura Célula de início (referencia) da formatação
+
+Inicio:
+
+  frm.Show
+  
+  If Not IsFormLoaded(frm) Then Exit Sub    'Verifica se Formulário está carregado...
+  
+  CelulaInicio = UCase(frm.txtCelulaInicial.Text)     'Captura célula de início
+  w.Range(CelulaInicio).Select    'Início
+  
+  If IsEmpty(ActiveCell.Value2) Then    'Se não contém dados...
+  
+    MsgBox "Célula vazia. Informe outra.", vbExclamation, "FORMATA PARTNUMBER"
+    frm.txtCelulaInicial.Text = ""    'Limpa Caixa de texto
+    GoTo Inicio
+    
+  End If
+      
+  Call TurnOffFunctionality
+      
+  'Instancia Range Dinâmico
+  Set LastRow = w.Cells(w.Rows.Count, ActiveCell.Column).End(xlUp)    'Conta linhas
+  Set Rng = w.Range(w.Cells(ActiveCell.Row, ActiveCell.Column), w.Cells(LastRow.Row, ActiveCell.Column))    'Define Range dinâmico
+  
+  For Each iCell In Rng   'Limpa todos os caracteres abaixo
+    
+    If iCell = "" Or iCell = Empty Then GoTo ProximaCell    'Se vazio, próx...
+    
+    With iCell
+      
+      .Value2 = Replace(.Value2, Chr(9), "")    'Caracter Tabela
+      .Value2 = Replace(.Value2, Chr(26), "")   'Seta
+      .Value2 = Replace(.Value2, Chr(31), "")   'Separador de Unidade
+      .Value2 = Replace(.Value2, Chr(32), "")   'Espaço
+      .Value2 = Replace(.Value2, Chr(35), "")   '#
+      .Value2 = Replace(.Value2, Chr(42), "")   '*
+      .Value2 = Replace(.Value2, Chr(44), "")   'Vírgula
+      .Value2 = Replace(.Value2, Chr(46), "")   'Ponto
+      .Value2 = Replace(.Value2, Chr(176), "")   'Ponto
+    
+    End With
+    
+ProximaCell:
+    
+  Next iCell
+      
+  'Para não exibir pontos quando Value2 da célula for só números
+  With Rng
+  
+    .NumberFormat = "General"
+    .VerticalAlignment = xlCenter
+    .HorizontalAlignment = xlLeft
+    
+  End With
+  
+  'Verifica qual opção usuário escolheu
+  If frm.optSemPonto Then
+  
+    Call FormatacaoFinalPartnumberSemPonto
+    
+    Else
+    
+      Call FormatacaoFinalPartnumberComPonto
+      
+  End If
+      
+  'Limpa objetos da memória
+  Unload frm    'Descarrega o formulário da memória
+  
+  Set w = Nothing
+      
+  Call TurnOnFunctionality
+      
+  MsgBox "Feito!", vbInformation, "FORMATA PARTNUMBER"
+    
+End Sub
+
+'Função verifica se formulário está carregado
+Private Function IsFormLoaded(pForm As Variant) As Boolean
+
+  On Error Resume Next
+  
+  pForm.Tag = pForm.Tag
+  
+  If Err.Number = 0 Then    'Se estiver carregado...
+  
+      IsFormLoaded = True
+      
+    Else    'Se não estiver...
+    
+      Set pForm = Nothing
+      
+  End If
+
+End Function
+
+Sub FormatacaoFinalPartnumberSemPonto()
+  
+  Set w = ActiveSheet
+  
+  'Instancia Range Dinâmico
+  Set LastRow = w.Cells(w.Rows.Count, ActiveCell.Column).End(xlUp)    'Conta linhas
+  Set Rng = w.Range(w.Cells(ActiveCell.Row, ActiveCell.Column), w.Cells(LastRow.Row, ActiveCell.Column))    'Define range dinâmico
+        
+  'Casos que precisam ser formatados são os de 12 e 13 caracteres e N. Os demais já estão prontos
+  For Each iCell In Rng
+    
+    If iCell = "" Or iCell = Empty Then GoTo ProximaCell    'Se vazio, próx...
+    
+    Contador = 0
+    
+    Contador = Len(iCell)
+    
+    Select Case Contador
+      
+      Case Is = 12: iCell.Value2 = Left(iCell, Contador - 3) & Space(2) & Right(iCell, 3)
+      
+      Case Is = 13: iCell.Value2 = Left(iCell, Contador - 3) & Space(1) & Right(iCell, 3)
+        
+    End Select    'Contador
+    
+    If UCase(Left(iCell, 1)) = "N" Then iCell.Value2 = Left(iCell, 1) & Space(2) & Right(iCell, Contador - 1)
+    
+ProximaCell:
+    
+  Next iCell
+  
+End Sub
+
+Sub FormatacaoFinalPartnumberComPonto()
+  
+  Set w = ActiveSheet
+  
+  'Instancia Range Dinâmico
+  Set LastRow = w.Cells(w.Rows.Count, ActiveCell.Column).End(xlUp)    'Conta linhas
+  Set Rng = w.Range(w.Cells(ActiveCell.Row, ActiveCell.Column), w.Cells(LastRow.Row, ActiveCell.Column))    'Define Range dinâmico
+  
+  Contador1 = 0
+  
+  For Each iCell In Rng
+    
+    If iCell = "" Or iCell = Empty Then GoTo ProximaCell    'Se vazio, próx...
+      
+    Contador = 0
+    
+    Contador = Len(iCell)
+    
+    If UCase(Left(iCell, 1)) = "N" Then    'Iniciar com a letra N
+         
+      If Contador = 8 Then
+      
+        iCell.Value2 = Left(iCell, 1) & Space(2) & Chr(46) & Mid(iCell, 2, 6) & Chr(46) & Mid(iCell, 8, 1)
+        GoTo ProximaCell
+        
+        Else
+        
+          iCell.Value2 = Left(iCell, 1) & Space(2) & Chr(46) & Mid(iCell, 2, 6) & Chr(46) & Mid(iCell, 8, 2)
+          GoTo ProximaCell
+          
+      End If    'Contador = 8
+         
+    End If    'UCase(Left(iCell, 1)) = "N"
+    
+    If Contador = 11 Then
+      
+      If UCase(Left(iCell, 2)) <> "A2" And UCase(Left(iCell, 2)) <> "A3" And UCase(Left(iCell, 2)) <> "A4" And UCase(Left(iCell, 2)) <> "A9" Then
+         
+        iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Mid(iCell, 4, 6) & Chr(46) & Right(iCell, Contador - 9))   'Sem index. Com Fakom
+        GoTo ProximaCell
+        
+      End If    'UCase(Left(iCell, 2)) = "A2"
+      
+    End If    'Contador = 11
+    
+    Select Case Contador
+      
+      Case Is = 9: iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Right(iCell, Contador - 3))   'Sem Index
+      Case Is = 10: iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Mid(iCell, 4, 6) & Chr(46) & Right(iCell, Contador - 9))    '1 Index
+      Case Is = 12: iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Mid(iCell, 4, 6) & Chr(46) & Space(2) & Right(iCell, Contador - 9))   'Sem index. Com Fakom
+      Case Is = 13: iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Mid(iCell, 4, 6) & Chr(46) & Mid(iCell, 10, 1) & Space(1) & Right(iCell, Contador - 10))    '1 Index. Com Fakom
+      Case Is = 14: iCell.Value2 = UCase(Left(iCell, 3) & Chr(46) & Mid(iCell, 4, 6) & Chr(46) & Right(iCell, Contador - 9))   '2 Index. Com Fakom
+      
+    End Select    'Contador
+    
+ProximaCell:
+    
+  Next iCell
+  
+End Sub
