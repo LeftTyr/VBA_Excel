@@ -1,0 +1,187 @@
+Option Explicit
+
+'+-----------------------------------------------------------+
+'|By: N. Silva                                               |
+'|Created: 31/07/2021                                        |
+'|Last Update: 14/10/2022                                    |
+'|Total Atualizações: 03                                     |
+'|                                                           |
+'|Purpose:                                                   |
+'|        Formata dados do arquivo de saída SAP Job Maire006 |
+'+-----------------------------------------------------------+
+
+Sub FormataJobMaire()
+  
+  LayOutOk = False
+  
+  Call VerificaLayout: If LayOutOk = False Then Exit Sub    'Depois de avaliar se LayOut continuar False sair da rotina
+  
+  TurnOffFunctionality
+  
+  ActiveSheet.Name = "Job Maire006": Set w = Worksheets(ActiveSheet.Name)    'Nomeia Planilha
+  
+  ActiveWindow.DisplayGridlines = False   'Desativa linhas de grade
+  
+  With w
+  
+    'Elimina linha desnecessária
+    .Rows("1:9").Delete
+    .Rows("2").Delete
+  
+    'Elimina coluna desnecessária
+    .Columns(1).Delete
+  
+    'Fonte e tamanho
+    .Cells.Select
+    
+    With Selection
+    
+      .Font.Name = "Consolas"
+      .Font.Size = 10
+      .VerticalAlignment = xlCenter   'Alinhamento vertical
+      
+    End With
+  
+    Set CountRow = .Cells(.Rows.Count, 1).End(xlUp)    'Conta linhas
+  
+    'Elimina
+    ' - Linhas em Branco
+    ' - Outros Cabeçalhos
+    Set Rng = .Range("A2:A" & CountRow.Row)
+    
+    For Each iCell In Rng
+      If iCell.Value2 = "Cen." Then
+        iCell.ClearContents
+      End If
+    Next iCell
+    
+    Rng.SpecialCells(xlCellTypeBlanks).EntireRow.Delete
+    
+    Set CountRow = .Cells(.Rows.Count, 1).End(xlUp)   'Conta novamente, depois de deletar linhas
+    
+    'Formata tipo de dados
+    .Range("H:J").NumberFormat = "_($* #,##0.00_);_($* (#,##0.00);_($* ""-""??_);_(@_)"     'Contábil
+    .Range("A:A, E:E, P:P").NumberFormat = "0"    'Número 0 casa decimal
+    .Range("K:K, M:N").NumberFormat = "0.00"    'Número 2 casas decimais
+    .Range("B:D, F:F, L:L, S:S").NumberFormat = "@"     'Texto
+  
+    'Alinhamentos Horizontais específicos colunas inteira
+    .Range("B:C").HorizontalAlignment = xlLeft     'Esquerda
+    .Range("H:K, M:N").HorizontalAlignment = xlRight    'Direita
+    .Range("A:A, D:G, L:L, O:S").HorizontalAlignment = xlCenter     'Centro
+    
+    'Alinhamento horizontal específico cabeçalho
+    .Range("H1:K1, M1:N1").HorizontalAlignment = xlCenter    'Direita
+        
+    'Colunas de Datas (Transforma texto em data (Sem inversão entre dia e mês))
+    Set Rng = .Range("G2:G" & CountRow.Row)    'Data de Término do Mat
+    Rng.TextToColumns Destination:=Range("G2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=True, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 4), TrailingMinusNumbers:=True
+        
+    Set Rng = .Range("O2:O" & CountRow.Row)    'Data Última NF Ent
+    Rng.TextToColumns Destination:=Range("O2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=True, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 4), TrailingMinusNumbers:=True
+        
+    Set Rng = .Range("Q2:Q" & CountRow.Row)    'Data Últ
+    Rng.TextToColumns Destination:=Range("Q2"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=True, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 4), TrailingMinusNumbers:=True
+    
+    'Formata Cabeçalho
+    .Range("A1").Select
+    .Range(Selection, Selection.End(xlToRight)).Select
+      With Selection.Font
+        .Name = "Consolas"
+        .Size = 12
+        .Bold = True
+        .Italic = True
+      End With
+    'Bordas
+    With Selection.Borders(xlEdgeLeft)
+      .LineStyle = xlContinuous
+      .Weight = xlHairline
+    End With
+    With Selection.Borders(xlEdgeTop)
+      .LineStyle = xlContinuous
+      .Weight = xlHairline
+    End With
+    With Selection.Borders(xlEdgeBottom)
+      .LineStyle = xlContinuous
+      .Weight = xlHairline
+    End With
+    With Selection.Borders(xlEdgeRight)
+      .LineStyle = xlContinuous
+      .Weight = xlHairline
+    End With
+    With Selection.Borders(xlInsideVertical)
+      .LineStyle = xlContinuous
+      .Weight = xlHairline
+    End With
+    
+    .Columns.AutoFit     'Ajuste largura das colunas conforme conteúdo
+    
+    'Insere valor padrão no Valor variável caso este seja = 0
+    Set Rng = .Range("H2:H" & CountRow.Row)
+    
+    For Each iCell In Rng
+    
+      If iCell.Value2 = 0 Then
+      
+        iCell.Value2 = iCell.Offset(0, 1).Value2
+        iCell.Font.Color = vbBlue
+        
+      End If
+      
+    Next iCell
+    
+    'Retira Pontos partnumber
+    .Columns("B:B").Replace What:=".", Replacement:="", LookAt:=xlPart, _
+                                  SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
+    
+    .Columns("B:B").NumberFormat = "General"
+    
+    .Range("A1").Select
+  
+  End With    'w
+  
+  Set w = Nothing
+  Set Rng = Nothing
+  Set iCell = Nothing
+  Set CountRow = Nothing
+  
+  Call TurnOnFunctionality
+  
+  MsgBox "JobMaire006 - Formatação Concluída.", vbInformation
+  
+End Sub
+
+'Verifica se a planilha aberta é Maire.
+'E se o Layout está OK
+Private Sub VerificaLayout()
+
+  With ActiveSheet
+    
+    If Trim(.Range("B10").Value2) = "Cen." And Trim(.Range("C10").Value2) = "Material" And Trim(.Range("D10").Value2) = "Texto breve de material" _
+      And Trim(.Range("E10").Value2) = "SM" And Trim(.Range("F10").Value2) = "O" And Trim(.Range("G10").Value2) = "PlM" _
+        And Trim(.Range("H10").Value2) = "Data de Término do Mat" And Trim(.Range("I10").Value2) = "Preço Médi" And Trim(.Range("J10").Value2) = "Preço-padr" _
+          And Trim(.Range("K10").Value2) = "Valor" And Trim(.Range("L10").Value2) = "Total" And Trim(.Range("M10").Value2) = "UMB" _
+            And Trim(.Range("N10").Value2) = "Consumo pl" And Trim(.Range("O10").Value2) = "Recebiment" And Trim(.Range("P10").Value2) = "Data Última NF Ent" _
+              And Trim(.Range("Q10").Value2) = "Fornecedor" And Trim(.Range("S10").Value2) = "Chave de T" Then
+                  
+      LayOutOk = True
+     Else
+      MsgBox "LayOut do Extrato SM37DISP não está Correto para execução da Macro." & vbNewLine & _
+             "Verifique o que ocorreu e tente novamente.", vbCritical
+     
+    End If
+  
+  End With    'Activesheet
+    
+End Sub
+
+
